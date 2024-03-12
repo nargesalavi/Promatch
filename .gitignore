@@ -1,7 +1,7 @@
 **/.ipynb_checkpoints/
 #Copied
 */Debug/*
-*/Release/*
+/Release/*
 */bin
 */bin/*
 */src/*.*swp
