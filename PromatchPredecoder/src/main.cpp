@@ -181,18 +181,23 @@ int main(int argc, char** argv){
         experiment_type.find("exp35") == std::string::npos and 
         experiment_type.find("exp36") == std::string::npos and 
         experiment_type.find("exp37") == std::string::npos and 
-        experiment_type.find("exp38") == std::string::npos  and 
-        experiment_type.find("exp39") == std::string::npos)
+        experiment_type.find("exp38") == std::string::npos and 
+        experiment_type.find("exp39") == std::string::npos and 
+        experiment_type.find("exp40") == std::string::npos) 
         outputFile  = std::ofstream(file_name);
+    if(experiment_type.find("exp40") != std::string::npos){
+        MWPM_ler(max_shots, distance, physical_er, m_error, min_k, max_k, print_time, round_n, save_syndrome, syndrome_folder_name, 
+        decoder_name, high_shots_replacement, low_shots_replacement, important_bucket);
 
-    if (experiment_type.find("exp39") != std::string::npos){
+        //bb_ler_calculation(decoder_name, outputFile, max_shots, distance, physical_er, m_error, min_k, max_k, 5'000'000);
+    }
+    else if (experiment_type.find("exp39") != std::string::npos){
         testing_all(max_shots, distance, physical_er,
             m_error, min_k, max_k, threshold_scale, print_time, "MWPM", generalized, round_n, false , syndrome_folder_name, " ", high_shots_replacement, low_shots_replacement, important_bucket);
     }
     else if (experiment_type.find("exp38") != std::string::npos){
         
         print_mwpm_mistakes( distance, physical_er, m_error, min_k, max_k, outputFile, generalized);
-        std::cout << "X";
 
     }
     if (experiment_type.find("exp37") != std::string::npos){

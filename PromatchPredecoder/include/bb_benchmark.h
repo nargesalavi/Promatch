@@ -109,5 +109,8 @@ fp_t physcial_error, fp_t meas_er, uint64_t min_k, uint64_t max_k, std::ofstream
  void testing_all(uint64_t max_shot, uint distance, 
 fp_t physcial_error, fp_t meas_er, uint64_t min_k, uint64_t max_k, fp_t threshold_scale, bool& print_time, std::string decoder_name, bool generalized, uint round_n, bool save_syndromes, std::string syndrome_folder_name, std::string syndrome_clock_challenging_file, uint64_t hshots_replc, uint64_t lshots_rplac, bool only_important_bucket = false);    
 
+void MWPM_ler(uint64_t max_shot, uint distance,fp_t physcial_error, fp_t meas_er, uint64_t min_k, 
+    uint64_t max_k, bool& print_time, uint round_n = 0, bool save_syndromes = false, std::string syndrome_folder_name="dummyfolder",  
+    std::string decoder_name="MWPM", uint64_t hshots_replc = 20'000'000, uint64_t lshots_rplac = 1'000'000, bool only_important_bucket = false));
 
 #endif

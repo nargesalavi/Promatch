@@ -7358,10 +7358,10 @@ fp_t physcial_error, fp_t meas_er, uint64_t min_k, uint64_t max_k, fp_t threshol
             min_k = 7;
             max_k = 10;
         }
-        else if(distance == 13){
-            min_k = 9;
-            max_k = 12;
-        }
+        // else if(distance == 13){
+        //     min_k = 9;
+        //     max_k = 12;
+        // }
     }
 
     // std::string syndrome_file = "../NFDecoder/data/challengingSyndromes_d13/challenging_d13.txt";
@@ -7803,3 +7803,194 @@ fp_t physcial_error, fp_t meas_er, uint64_t min_k, uint64_t max_k, fp_t threshol
 
 }
 
+
+
+
+void MWPM_ler(uint64_t max_shot, uint distance, 
+fp_t physcial_error, fp_t meas_er, uint64_t min_k, uint64_t max_k, bool& print_time, uint round_n, bool save_syndromes, 
+    std::string syndrome_folder_name, std::string decoder_name, uint64_t hshots_replc, uint64_t lshots_rplac, bool only_important_bucket){
+    uint64_t SHOTS_PER_BATCH = 1'000'000;
+    int world_size, world_rank;
+    MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+    MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+    uint round = 0;
+    if(world_rank == 0){
+        std::cout << "round#" <<round_n <<" " << decoder_name <<std::endl;
+    }
+    if(only_important_bucket){
+        if(distance == 11){
+            min_k = 7;
+            max_k = 10;
+        }
+        // else if(distance == 13){
+        //     min_k = 9;
+        //     max_k = 12;
+        // }
+    }
+
+
+    // for saving syndromes
+    if (world_rank == 0 && save_syndromes){
+        std::cout << syndrome_folder_name<< std::endl;
+        // To check if we are reading correct files
+        if (opendir(syndrome_folder_name.c_str()) == NULL) {
+            if (mkdir(syndrome_folder_name.c_str(), 0777) == 0) {
+                std::cout << "Directory created successfully\n";
+            } else {
+                std::cout << "Failed to create directory\n";
+            }
+        } 
+        else {
+            std::cout << "Directory already exists\n";
+        }
+    
+    }
+
+
+    const stim::Circuit circ = qrc::build_circuit(
+        distance,
+        0,
+        0,
+        true,
+        true,
+        false,
+        0,
+        distance,
+        physcial_error,
+        0,
+        0,
+        0,
+        -1,
+        -1,
+        -1,
+        meas_er //measurement error rates
+    ); 
+
+    if(world_rank == 0){
+        std::cout << "Circuit created, ";
+    }
+    bbsim::BucketBasedSim simulator(circ,max_k);
+    qrc::benchmark::StatisticalResult statres;
+    qrc::Decoder* decoder;
+    if(world_rank == 0){
+        std::cout << "Simulator created, ";
+    }
+
+    if (decoder_name.find("MWPM") != std::string::npos){
+        decoder = new qrc::MWPMDecoder(circ);
+    }
+    
+    else if(decoder_name.find("ASTREAG") != std::string::npos){
+        qrc::AstreaParams astreaG_param= {};
+        astreaG_param.bfu_fetch_width = 2;
+        astreaG_param.bfu_priority_queue_size = 8;
+        astreaG_param.main_clock_frequency = 250e6;
+        astreaG_param.bfu_compute_stages = 2;
+        astreaG_param.n_registers = 2000;
+        astreaG_param.use_mld = false;
+
+        uint n_detectors_per_round = (distance*distance - 1)/2;
+        uint32_t weight_filter_cutoff =  -MWPM_INTEGER_SCALE*log10(0.01*0.03*pow((physcial_error/0.0054), ((distance+1)/2))); // -1*log10(0.01*1e-9);
+    
+
+        decoder =  new  qrc::Astrea(circ,
+                                            n_detectors_per_round,
+                                            weight_filter_cutoff,
+                                            astreaG_param);
+    }
+    else{
+        std::cout << "NO SPECIFIED DECODER";
+        return;
+    }
+    if(world_rank == 0){
+        std::cout << "Decoder " << decoder_name << " created, ";
+    }
+    std::mt19937_64 rng(world_size*round_n+world_rank);
+
+    std::vector<vector<vector<uint16_t>>> saved_hhw_syndromes;
+    saved_hhw_syndromes.resize(world_size);
+    std::vector<uint16_t> flipped_bits;
+
+    fp_t expected_ler = 0.03*pow((physcial_error/0.0054), ((distance+1)/2));
+    simulator.set_shots_per_k(expected_ler, max_shot, true, hshots_replc, lshots_rplac);
+    
+    uint64_t max_k_ = max_k;
+    for(uint k = 0; k < max_k-min_k; k++){
+        if(simulator.shots_per_k[k+min_k] == 0){
+            max_k_ --;
+        }
+    }
+    max_k = max_k_;
+
+    if(world_rank == 0){
+        std::cout << "Simulator set the number of shots. " << std::endl;
+    }
+    if(world_rank == 0){
+        print_time = true;
+        std::cout << "Distance = " << distance << " Expected LER = " << expected_ler << " Max Shots per bucket = " << max_shot  << " Physical Err = "<< physcial_error<<std::endl;
+        for(uint x=0;x<max_k-min_k; x++){
+            std::cout << "k = " << x+min_k<< "( " << simulator.prob_k[x+min_k] << ") -itr= " << simulator.shots_per_k[x+min_k]<<std::endl;
+        }
+    }
+    fp_t prev_logical_error_rate = 0.0;
+    for(uint k = 0; k < max_k-min_k; k++){
+        uint64_t local_errors = 0;
+        uint64_t shots = simulator.shots_per_k[k+min_k] / world_size;
+        if (world_rank == world_size - 1) {
+            shots += simulator.shots_per_k[k+min_k] % world_size;
+        }
+        while(shots > 0){
+            
+            uint32_t shots_this_round = shots > SHOTS_PER_BATCH ? SHOTS_PER_BATCH : shots;
+            
+            auto buffer = simulator.create_syndromes_simd( k+min_k, shots_this_round, rng, false);
+            for(uint s = 0; s<shots_this_round; s++){
+                std::vector<uint8_t> syndrome = qrc::_to_vector(buffer[s], simulator.n_detectors, simulator.n_observables);
+                // std::cout << "!!1" << std::endl;
+                auto res = decoder->decode_error(syndrome);
+                
+                local_errors += res.is_logical_error;
+                if(res.is_logical_error){
+                    flipped_bits = qpd::syndrome_compressed(syndrome);
+                    saved_hhw_syndromes[world_rank].push_back(flipped_bits);
+
+                }
+                
+            }
+            shots -= shots_this_round;
+        }
+        uint64_t fault_errors = 0;
+        MPI_Allreduce(&local_errors, &fault_errors, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, MPI_COMM_WORLD);
+
+        if (world_rank == 0 && simulator.shots_per_k[k+min_k]!=0) {
+            std::cout << "Bucket = " << k+min_k << "\n"
+                    << "\tProbability of bucket = " << simulator.prob_k[k+min_k] << std::endl;
+        }
+
+        if (fault_errors > 0) {
+            fp_t failure_rate = ((fp_t)fault_errors/simulator.shots_per_k[k+min_k]);
+        
+            prev_logical_error_rate = statres.logical_error_rate;
+            statres.logical_error_rate += (failure_rate*simulator.prob_k[k+min_k]);
+            statres.n_logical_errors += fault_errors;
+
+            if (world_rank == 0) {
+                std::cout << "\tFailure rate = " << failure_rate << std::endl
+                        << "\tNumber of errors = " << statres.n_logical_errors << std::endl;
+                std::cout << "\tLogical error rate = " << statres.logical_error_rate << std::endl;
+            }
+        }
+        if (world_rank == 0) {
+            std::cout << "_______________________________________________"<< std::endl;
+        }
+
+        if(int(saved_hhw_syndromes[world_rank].size()) != 0){
+            std::string file_name = syndrome_folder_name + syndrome_file_name("sgen",distance,physcial_error,
+            meas_er, max_shot, world_rank, round);
+            qpd::write_vector_of_vectors(saved_hhw_syndromes[world_rank], file_name);
+            saved_hhw_syndromes[world_rank].clear();
+            round++;
+        }
+    }
+
+}
