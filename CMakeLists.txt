@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20.2)
-project(	 VERSION 0.1)
+project(Promatch VERSION 0.1)
 # Declare CPP Version
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
