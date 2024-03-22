@@ -505,7 +505,7 @@ BucketBasedSim::set_shots_per_k(fp_t expected_ler, uint64_t max_n_iteration, boo
         exponent = std::floor(std::log10(result));
         base = std::round(result / std::pow(10, exponent));
         shots = 4*((uint64_t)base*std::pow(10, exponent));
-        std::cout << k << " " << shots << std::endl;
+        // std::cout << k << " " << shots << std::endl;
         if(max_n_iteration < shots){
             // if(shots < 10*max_n_iteration){
             //     shots = max_n_iteration;
@@ -516,7 +516,7 @@ BucketBasedSim::set_shots_per_k(fp_t expected_ler, uint64_t max_n_iteration, boo
             // else{
             //     shots = 0;
             // }
-            std::cout << k << " " << shots << "max_n_iteration < shots" << std::endl;
+            // std::cout << k << " " << shots << "max_n_iteration < shots" << std::endl;
             if(set_shots_to_all){
                 shots = filling_n_iterations;
             }
@@ -525,7 +525,7 @@ BucketBasedSim::set_shots_per_k(fp_t expected_ler, uint64_t max_n_iteration, boo
             }
         }
         else if(shots !=0 && shots < min_n_iteration){
-            std::cout << k << " " << shots << "shots !=0 && shots < min_n_iteration" << std::endl;
+            // std::cout << k << " " << shots << "shots !=0 && shots < min_n_iteration" << std::endl;
             shots = min_n_iteration;
         }
         shots_per_k[k] = shots;

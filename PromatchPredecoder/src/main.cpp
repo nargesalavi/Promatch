@@ -46,7 +46,7 @@ int main(int argc, char** argv){
     bool flag_s = false;
     bool print_logs = false;
     bool print_time = false;
-    bool save_syndrome = true;
+    bool save_syndrome = false;
     bool generalized = false;
     bool important_bucket = false;
     int s = 0;

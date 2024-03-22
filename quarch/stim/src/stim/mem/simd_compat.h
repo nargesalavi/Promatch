@@ -17,12 +17,12 @@
 #ifndef _STIM_MEM_SIMD_COMPAT_H
 #define _STIM_MEM_SIMD_COMPAT_H
 
-#if __AVX2__
-#include "stim/mem/simd_compat_avx2.h"
-#elif __SSE2__
-#include "stim/mem/simd_compat_sse2.h"
-#else
+// #if __AVX2__
+// #include "stim/mem/simd_compat_avx2.h"
+// #elif __SSE2__
+// #include "stim/mem/simd_compat_sse2.h"
+// #else
 #include "stim/mem/simd_compat_polyfill.h"
-#endif
+// #endif
 
 #endif

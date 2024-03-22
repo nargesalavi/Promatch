@@ -7613,7 +7613,6 @@ fp_t physcial_error, fp_t meas_er, uint64_t min_k, uint64_t max_k, fp_t threshol
                     flipped_bits = qpd::syndrome_compressed(syndrome, false);
                 }
                 if(PAG_err){
-                    std::cout << "* ";
                     flipped_bits = qpd::syndrome_compressed(syndrome, false);
                 }
 
@@ -7907,8 +7906,7 @@ fp_t physcial_error, fp_t meas_er, uint64_t min_k, uint64_t max_k, bool& print_t
     }
     std::mt19937_64 rng(world_size*round_n+world_rank);
 
-    std::vector<vector<vector<uint16_t>>> saved_hhw_syndromes;
-    saved_hhw_syndromes.resize(world_size);
+
     std::vector<uint16_t> flipped_bits;
 
     fp_t expected_ler = 0.03*pow((physcial_error/0.0054), ((distance+1)/2));
@@ -7952,8 +7950,6 @@ fp_t physcial_error, fp_t meas_er, uint64_t min_k, uint64_t max_k, bool& print_t
                 local_errors += res.is_logical_error;
                 if(res.is_logical_error){
                     flipped_bits = qpd::syndrome_compressed(syndrome);
-                    saved_hhw_syndromes[world_rank].push_back(flipped_bits);
-
                 }
                 
             }
@@ -7984,13 +7980,6 @@ fp_t physcial_error, fp_t meas_er, uint64_t min_k, uint64_t max_k, bool& print_t
             std::cout << "_______________________________________________"<< std::endl;
         }
 
-        if(int(saved_hhw_syndromes[world_rank].size()) != 0){
-            std::string file_name = syndrome_folder_name + syndrome_file_name("sgen",distance,physcial_error,
-            meas_er, max_shot, world_rank, round);
-            qpd::write_vector_of_vectors(saved_hhw_syndromes[world_rank], file_name);
-            saved_hhw_syndromes[world_rank].clear();
-            round++;
-        }
     }
 
 }
